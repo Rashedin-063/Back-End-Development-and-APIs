@@ -1,87 +1,82 @@
 require('dotenv').config();
-
 const express = require('express');
 const cors = require('cors');
-const app = express();
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
+const app = express();
 
+// Middleware
+app.use(cors());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
-
-// Basic Configuration
-try {
-  mongoose.connect(process.env.DB_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  });
-  console.log('mongodb connection established');
-} catch (err) {
-  console.log(err);
-}
-
-const port = process.env.PORT || 3000;
-
-// Model
-const schema = new mongoose.Schema({
-  original: { type: String, required: true },
-  short: { type: Number, required: true },
-});
-const Url = mongoose.model('Url', schema);
-
-app.use(cors());
-
 app.use('/public', express.static(`${process.cwd()}/public`));
 
-app.get('/', function (req, res) {
+// Connect to Mongo
+mongoose
+  .connect(process.env.DB_URI)
+  .then(() => console.log('MongoDB connected'))
+  .catch((err) => console.log(err));
+
+// Schema and Model
+const urlSchema = new mongoose.Schema({
+  original: String,
+  short: Number,
+});
+
+const Url = mongoose.model('Url', urlSchema);
+
+// Routes
+app.get('/', (req, res) => {
   res.sendFile(process.cwd() + '/views/index.html');
 });
 
-// Your first API endpoint
-app.get('/api/shorturl/:input', async (req, res) => {
-  const input = parseInt(req.params.input);
+app.post('/api/shorturl', async (req, res) => {
+  const bodyUrl = req.body.url;
+  const urlRegex = /^https?:\/\/(www\.)?[\w\-]+\.\w{2,}(\/[\w\-./?%&=]*)?$/;
+
+  if (!urlRegex.test(bodyUrl)) {
+    return res.json({ error: 'invalid url' });
+  }
 
   try {
-    const found = await Url.findOne({ short: input });
+    // Check if already exists
+    const found = await Url.findOne({ original: bodyUrl });
+    if (found) {
+      return res.json({
+        original_url: found.original,
+        short_url: found.short,
+      });
+    }
+
+    // Assign next short number
+    const count = await Url.estimatedDocumentCount();
+    const newUrl = new Url({ original: bodyUrl, short: count + 1 });
+    await newUrl.save();
+
+    res.json({
+      original_url: newUrl.original,
+      short_url: newUrl.short,
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.get('/api/shorturl/:input', async (req, res) => {
+  const shortId = parseInt(req.params.input);
+
+  try {
+    const found = await Url.findOne({ short: shortId });
     if (!found)
       return res.json({ error: 'No short URL found for given input' });
+
     res.redirect(found.original);
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
   }
 });
 
-
-app.post('/api/shorturl', async (req, res) => {
-  const bodyUrl = req.body.url;
-  let urlRegex = new RegExp(
-    /^https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/
-  );
-
-  if (!bodyUrl.match(urlRegex)) {
-    return res.json({ error: 'invalid url' }); // <- note lowercase 'invalid url'
-  }
-
-  try {
-    // Check if the URL is already in DB
-    let found = await Url.findOne({ original: bodyUrl });
-    if (found) {
-      return res.json({ original_url: found.original, short_url: found.short });
-    }
-
-    // Otherwise, assign next short number
-    const latest = await Url.findOne().sort({ short: 'desc' });
-    const newShort = latest ? latest.short + 1 : 1;
-
-    const newUrl = new Url({ original: bodyUrl, short: newShort });
-    await newUrl.save();
-
-    res.json({ original_url: newUrl.original, short_url: newUrl.short });
-  } catch (err) {
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-app.listen(port, function () {
+const port = process.env.PORT || 3000;
+app.listen(port, () => {
   console.log(`Listening on port ${port}`);
 });
