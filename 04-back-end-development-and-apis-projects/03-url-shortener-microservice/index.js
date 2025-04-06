@@ -1,7 +1,5 @@
 require('dotenv').config();
 
-console.log(process.env.DB_URI);
-
 const express = require('express');
 const cors = require('cors');
 const app = express();
@@ -17,6 +15,7 @@ try {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   });
+  console.log('mongodb connection established');
 } catch (err) {
   console.log(err);
 }
@@ -58,26 +57,21 @@ app.post('/api/shorturl', async (req, res) => {
     return res.json({ error: 'Invalid URL' });
   }
 
-  let index = 1;
+  try {
+    let index = 1;
+    const latest = await Url.findOne().sort({ short: 'desc' });
+    index = latest ? latest.short + 1 : index;
 
-  Url.findOne({})
-    .sort({ short: 'desc' })
-    .exec((err, data) => {
-      if (err) return res.json({ error: 'No url found.' });
+    const newUrl = await Url.findOneAndUpdate(
+      { original: bodyUrl },
+      { original: bodyUrl, short: index },
+      { new: true, upsert: true }
+    );
 
-      index = data !== null ? data.short + 1 : index;
-
-      Url.findOneAndUpdate(
-        { original: bodyUrl },
-        { original: bodyUrl, short: index },
-        { new: true, upsert: true },
-        (err, newUrl) => {
-          if (!err) {
-            res.json({ original_url: bodyUrl, short_url: newUrl.short });
-          }
-        }
-      );
-    });
+    res.json({ original_url: bodyUrl, short_url: newUrl.short });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
 });
 
 app.listen(port, function () {
