@@ -38,37 +38,45 @@ app.get('/', function (req, res) {
 });
 
 // Your first API endpoint
-app.get('/api/shorturl/:input', (req, res) => {
+app.get('/api/shorturl/:input', async (req, res) => {
   const input = parseInt(req.params.input);
 
-  Url.findOne({ short: input }, function (err, data) {
-    if (err || data === null) return res.json('URL NOT FOUND');
-    return res.redirect(data.original);
-  });
+  try {
+    const found = await Url.findOne({ short: input });
+    if (!found)
+      return res.json({ error: 'No short URL found for given input' });
+    res.redirect(found.original);
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
 });
+
 
 app.post('/api/shorturl', async (req, res) => {
   const bodyUrl = req.body.url;
   let urlRegex = new RegExp(
-    /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&\/\/=]*)/
+    /^https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/
   );
 
   if (!bodyUrl.match(urlRegex)) {
-    return res.json({ error: 'Invalid URL' });
+    return res.json({ error: 'invalid url' }); // <- note lowercase 'invalid url'
   }
 
   try {
-    let index = 1;
+    // Check if the URL is already in DB
+    let found = await Url.findOne({ original: bodyUrl });
+    if (found) {
+      return res.json({ original_url: found.original, short_url: found.short });
+    }
+
+    // Otherwise, assign next short number
     const latest = await Url.findOne().sort({ short: 'desc' });
-    index = latest ? latest.short + 1 : index;
+    const newShort = latest ? latest.short + 1 : 1;
 
-    const newUrl = await Url.findOneAndUpdate(
-      { original: bodyUrl },
-      { original: bodyUrl, short: index },
-      { new: true, upsert: true }
-    );
+    const newUrl = new Url({ original: bodyUrl, short: newShort });
+    await newUrl.save();
 
-    res.json({ original_url: bodyUrl, short_url: newUrl.short });
+    res.json({ original_url: newUrl.original, short_url: newUrl.short });
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
   }
