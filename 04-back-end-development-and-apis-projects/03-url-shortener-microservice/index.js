@@ -30,27 +30,49 @@ app.get('/', (req, res) => {
   res.sendFile(process.cwd() + '/views/index.html');
 });
 
+app.get('/api/shorturl/:input', async (req, res) => {
+  const shortId = parseInt(req.params.input); // The `short_url` we need to redirect to
+
+  try {
+    // Find the URL with the corresponding short_id
+    const found = await Url.findOne({ short: shortId });
+    if (!found) {
+      return res.json({ error: 'No short URL found for given input' });
+    }
+
+    // Redirect to the original URL
+    res.redirect(found.original);
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+
 app.post('/api/shorturl', async (req, res) => {
   const bodyUrl = req.body.url;
-  let urlRegex = /^https?:\/\/(www\.)?[\w\-]+\.\w{2,}(\/[\w\-./?%&=]*)?$/;
 
+  // Validate the URL
+  const urlRegex =
+    /^(https?:\/\/)?([a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)*)(:[0-9]+)?(\/.*)?$/;
   if (!urlRegex.test(bodyUrl)) {
     return res.json({ error: 'invalid url' });
   }
 
   try {
-    // Check if already exists
-    const found = await Url.findOne({ original: bodyUrl });
-    if (found) {
+    // Check if the URL already exists
+    const existing = await Url.findOne({ original: bodyUrl });
+    if (existing) {
       return res.json({
-        original_url: found.original,
-        short_url: found.short,
+        original_url: existing.original,
+        short_url: existing.short,
       });
     }
 
-    // Assign next short number
-    const count = await Url.estimatedDocumentCount();
-    const newUrl = new Url({ original: bodyUrl, short: count + 1 });
+    // Create new short_url (auto-increment logic)
+    const count = await Url.countDocuments({});
+    const newShort = count + 1;
+
+    const newUrl = new Url({ original: bodyUrl, short: newShort });
     await newUrl.save();
 
     res.json({
@@ -62,19 +84,8 @@ app.post('/api/shorturl', async (req, res) => {
   }
 });
 
-app.get('/api/shorturl/:input', async (req, res) => {
-  const shortId = parseInt(req.params.input);
 
-  try {
-    const found = await Url.findOne({ short: shortId });
-    if (!found)
-      return res.json({ error: 'No short URL found for given input' });
 
-    res.redirect(found.original);
-  } catch (err) {
-    res.status(500).json({ error: 'Server error' });
-  }
-});
 
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
