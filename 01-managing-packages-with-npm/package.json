@@ -1,0 +1,23 @@
+{
+	"name": "fcc-learn-npm-package-json",
+	"author": "Mário Pereira",
+	"description": "A project that does absolutely nothing, probably.",
+	"version": "1.0.0",
+	"keywords": [
+		"freecodecamp",
+		"supermario",
+		"luigi"
+	],
+	"license": "MIT",
+	"dependencies": {
+		"express": "^5.0.0-alpha.8"
+	},
+	"main": "server.js",
+	"scripts": {
+		"start": "node server.js"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://idontknow/todo.git"
+	}
+}
