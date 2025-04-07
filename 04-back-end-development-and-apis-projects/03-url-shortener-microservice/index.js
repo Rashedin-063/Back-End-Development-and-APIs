@@ -11,17 +11,19 @@ const bodyParser = require('body-parser');
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
-// Basic Configuration
-try {
-  mongoose.connect(process.env.DB_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  });
-} catch (err) {
-  console.log(err);
-}
 
 const port = process.env.PORT || 3000;
+
+// Connect to MongoDB using mongoose
+mongoose
+  .connect(process.env.DB_URI)
+  .then(() => {
+    console.log('MongoDB connection established');
+  })
+  .catch((err) => {
+    console.log('Error connecting to the database:', err);
+    // process.exit(1);
+  });
 
 // Model
 const schema = new mongoose.Schema({
@@ -39,6 +41,27 @@ app.get('/', function (req, res) {
 });
 
 // Your first API endpoint
+app.get('/api/shorturl', (req, res) => {
+  res.json({
+    message: 'welcome to api shortener'
+  })
+});
+app.post('/api/shorturl', (req, res) => {
+  const bodyUrl = req.body.url
+  console.log(bodyUrl);
+
+  let urlRegex = new RegExp(
+    /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&\/\/=]*)/
+  );
+
+  if (!bodyUrl.match(urlRegex)) {
+    return res.json({ error: 'Invalid URL' });
+  }
+  
+  res.json({
+    message: 'your request is in process'
+  })
+});
 
 
 app.listen(port, function () {
