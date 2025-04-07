@@ -80,9 +80,6 @@ app.post('/api/shorturl', async(req, res) => {
 Url.findOne({ original: bodyUrl }, (err, existing) => {
   if (err) return res.json({ error: 'DB error.' });
 
-  console.log(existing)
-  
-
   if (existing) {
     // URL already exists, return existing short
     return res.json({
@@ -96,10 +93,6 @@ Url.findOne({ original: bodyUrl }, (err, existing) => {
     .sort({ short: 'desc' })
     .exec((err, latest) => {
       if (err) return res.json({ error: 'DB error.' });
-
-      return res.json({
-        latest
-      })
       
 
       const index = latest ? latest.short + 1 : 1;
