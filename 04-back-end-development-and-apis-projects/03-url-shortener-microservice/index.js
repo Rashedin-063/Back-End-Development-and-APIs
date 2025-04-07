@@ -73,6 +73,14 @@ app.post('/api/shorturl', async(req, res) => {
     return res.json({ error: 'Invalid URL' });
   }
 
+   try {
+     const totalCount = await Url.countDocuments();
+     console.log(totalCount);
+     return res.json({ totalCount });
+   } catch (error) {
+     res.status(500).json({ error: error.message });
+   }
+
   let index = 1;
 
    Url.findOne({})
