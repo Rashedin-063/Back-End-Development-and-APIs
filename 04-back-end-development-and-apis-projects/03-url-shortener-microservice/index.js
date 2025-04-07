@@ -41,12 +41,27 @@ app.get('/', function (req, res) {
 });
 
 // Your first API endpoint
-app.get('/api/shorturl', (req, res) => {
-  res.json({
-    message: 'welcome to api shortener'
+app.get('/api/shorturl/:input', async(req, res) => {
+  const input = parseInt(req.params.input)
+ 
+ try {
+   const foundUrl = await Url.findOne({ short: input });
+   
+   if (foundUrl) {
+     return res.redirect(foundUrl.original);
+   } else {
+     return res.status(404).json({
+       message: 'URL not found'
+     })
+   }
+
+ } catch (error) {
+   res.status(500).json({
+    message: error.message
   })
+ }
 });
-app.post('/api/shorturl', (req, res) => {
+app.post('/api/shorturl', async(req, res) => {
   const bodyUrl = req.body.url
   console.log(bodyUrl);
 
@@ -57,9 +72,29 @@ app.post('/api/shorturl', (req, res) => {
   if (!bodyUrl.match(urlRegex)) {
     return res.json({ error: 'Invalid URL' });
   }
-  
-  res.json({
-    message: 'your request is in process'
+
+  let index = 1;
+
+   Url.findOne({})
+    .sort({ short: 'desc' })
+    .exec((err, data) => {
+      if (err) return res.json({ 'no url found': err });
+      
+      index = data !== null ? data.short + 1 : index
+
+      Url.findOneAndUpdate(
+        { original: bodyUrl },
+        { original: bodyUrl, short: index },
+        { new: true, upsert: true },
+        (err, newUrl) => {
+          if (!err) {
+            return res.json({
+              original_url: bodyUrl,
+              short_url: newUrl.short
+            })
+          }
+        }
+      )
   })
 });
 

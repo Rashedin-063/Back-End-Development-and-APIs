@@ -41,6 +41,8 @@ app.get('/', function (req, res) {
 // Your first API endpoint
 app.get('/api/shorturl/:input', (req, res) => {
   const input = parseInt(req.params.input);
+  
+  
 
   Url.findOne({ short: input }, function (err, data) {
     if (err || data === null) return res.json('URL NOT FOUND');
@@ -57,6 +59,8 @@ app.post('/api/shorturl', async (req, res) => {
   if (!bodyUrl.match(urlRegex)) {
     return res.json({ error: 'Invalid URL' });
   }
+
+ 
 
   let index = 1;
 
