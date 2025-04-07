@@ -1,6 +1,6 @@
 require('dotenv').config();
 
-console.log(process.env.DB_URI);
+const port = process.env.PORT || 3000;
 
 const express = require('express');
 const cors = require('cors');
@@ -10,9 +10,10 @@ const bodyParser = require('body-parser');
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
+app.use(cors());
 
+app.use('/public', express.static(`${process.cwd()}/public`));
 
-const port = process.env.PORT || 3000;
 
 // Connect to MongoDB using mongoose
 mongoose
@@ -32,9 +33,7 @@ const schema = new mongoose.Schema({
 });
 const Url = mongoose.model('Url', schema);
 
-app.use(cors());
 
-app.use('/public', express.static(`${process.cwd()}/public`));
 
 app.get('/', function (req, res) {
   res.sendFile(process.cwd() + '/views/index.html');
