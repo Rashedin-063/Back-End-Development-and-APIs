@@ -73,37 +73,48 @@ app.post('/api/shorturl', async(req, res) => {
     return res.json({ error: 'Invalid URL' });
   }
 
-   try {
-     const totalCount = await Url.countDocuments();
-     console.log(totalCount);
-     return res.json({ totalCount });
-   } catch (error) {
-     res.status(500).json({ error: error.message });
-   }
+    let index = 1;
 
-  let index = 1;
 
-   Url.findOne({})
+
+Url.findOne({ original: bodyUrl }, (err, existing) => {
+  if (err) return res.json({ error: 'DB error.' });
+
+  console.log(existing)
+  
+
+  if (existing) {
+    // URL already exists, return existing short
+    return res.json({
+      original_url: existing.original,
+      short_url: existing.short,
+    });
+  }
+
+  // URL doesn't exist, get the highest short and insert new
+  Url.findOne({})
     .sort({ short: 'desc' })
-    .exec((err, data) => {
-      if (err) return res.json({ 'no url found': err });
-      
-      index = data !== null ? data.short + 1 : index
+    .exec((err, latest) => {
+      if (err) return res.json({ error: 'DB error.' });
 
-      Url.findOneAndUpdate(
-        { original: bodyUrl },
-        { original: bodyUrl, short: index },
-        { new: true, upsert: true },
-        (err, newUrl) => {
-          if (!err) {
-            return res.json({
-              original_url: bodyUrl,
-              short_url: newUrl.short
-            })
-          }
-        }
-      )
-  })
+      return res.json({
+        latest
+      })
+      
+
+      const index = latest ? latest.short + 1 : 1;
+
+      Url.create({ original: bodyUrl, short: index }, (err, newUrl) => {
+        if (err) return res.json({ error: 'Failed to save.' });
+
+        res.json({
+          original_url: newUrl.original,
+          short_url: newUrl.short,
+        });
+      });
+    });
+});
+
 });
 
 
