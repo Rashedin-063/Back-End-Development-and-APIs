@@ -61,54 +61,89 @@ app.get('/api/shorturl/:input', async(req, res) => {
   })
  }
 });
-app.post('/api/shorturl', async(req, res) => {
-  const bodyUrl = req.body.url
-  console.log(bodyUrl);
 
-  let urlRegex = new RegExp(
-    /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&\/\/=]*)/
-  );
+// callback way
+// app.post('/api/shorturl', async(req, res) => {
+//   const bodyUrl = req.body.url
+//   console.log(bodyUrl);
 
-  if (!bodyUrl.match(urlRegex)) {
-    return res.json({ error: 'Invalid URL' });
-  }
+//   let urlRegex = new RegExp(
+//     /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&\/\/=]*)/
+//   );
 
-    let index = 1;
+//   if (!bodyUrl.match(urlRegex)) {
+//     return res.json({ error: 'Invalid URL' });
+//   }
+
+//     let index = 1;
 
 
 
-Url.findOne({ original: bodyUrl }, (err, existing) => {
-  if (err) return res.json({ error: 'DB error.' });
+// Url.findOne({ original: bodyUrl }, (err, existing) => {
+//   if (err) return res.json({ error: 'DB error.' });
 
-  if (existing) {
-    // URL already exists, return existing short
-    return res.json({
-      original_url: existing.original,
-      short_url: existing.short,
-    });
-  }
+//   if (existing) {
+//     // URL already exists, return existing short
+//     return res.json({
+//       original_url: existing.original,
+//       short_url: existing.short,
+//     });
+//   }
 
-  // URL doesn't exist, get the highest short and insert new
-  Url.findOne({})
-    .sort({ short: 'desc' })
-    .exec((err, latest) => {
-      if (err) return res.json({ error: 'DB error.' });
+//   // URL doesn't exist, get the highest short and insert new
+//   Url.findOne({})
+//     .sort({ short: 'desc' })
+//     .exec((err, latest) => {
+//       if (err) return res.json({ error: 'DB error.' });
       
 
-      const index = latest ? latest.short + 1 : 1;
+//       const index = latest ? latest.short + 1 : 1;
 
-      Url.create({ original: bodyUrl, short: index }, (err, newUrl) => {
-        if (err) return res.json({ error: 'Failed to save.' });
+//       Url.create({ original: bodyUrl, short: index }, (err, newUrl) => {
+//         if (err) return res.json({ error: 'Failed to save.' });
 
-        res.json({
-          original_url: newUrl.original,
-          short_url: newUrl.short,
-        });
+//         res.json({
+//           original_url: newUrl.original,
+//           short_url: newUrl.short,
+//         });
+//       });
+//     });
+// });
+
+// });
+
+// async await way
+app.post('/api/shorturl', async (req, res) => {
+  const bodyUrl = req.body.url;
+
+  try {
+    // 1. Check if the URL already exists
+    const existing = await Url.findOne({ original: bodyUrl });
+
+    if (existing) {
+      return res.json({
+        original_url: existing.original,
+        short_url: existing.short,
       });
+    }
+
+    // 2. Get the latest short value
+    const latest = await Url.findOne().sort({ short: 'desc' });
+    const index = latest ? latest.short + 1 : 1;
+
+    // 3. Create a new shortened URL
+    const newUrl = await Url.create({ original: bodyUrl, short: index });
+
+    return res.json({
+      original_url: newUrl.original,
+      short_url: newUrl.short,
     });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Something went wrong.' });
+  }
 });
 
-});
 
 
 app.listen(port, function () {
