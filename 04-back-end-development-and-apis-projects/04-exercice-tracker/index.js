@@ -16,19 +16,7 @@ app.get('/', (req, res) => {
   res.sendFile(__dirname + '/views/index.html');
 });
 
-// Connect to MongoDB using mongoose
-mongoose
-  .connect(process.env.DB_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
-  .then(() => {
-    console.log('MongoDB connection established');
-  })
-  .catch((err) => {
-    console.log('Error connecting to the database:', err);
-    process.exit(1);
-  });
+
 
 // User schema
 const userSchema = new Schema(
