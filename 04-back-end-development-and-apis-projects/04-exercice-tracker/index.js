@@ -49,6 +49,25 @@ const User = mongoose.model('User', userSchema);
 const ERROR = { error: 'There was an error while getting the users.' };
 
 
+app.post('/api/users', (req, res) => {
+  res.status(201).json({
+    message: 'user saved successfully'
+  })
+});
+app.post('/api/users/:id/exercises', (req, res) => {
+  const id = req.params.id;
+  let { description, duration, date } = req.body;
+
+  const newExercise = {
+    description: description,
+    duration: duration,
+    date: date ? new Date(date).toDateString() : new Date().toDateString(),
+  };
+
+res.status(201).json({newExercise})
+});
+
+
 
 // Start the server
 const listener = app.listen(process.env.PORT || 3000, () => {
