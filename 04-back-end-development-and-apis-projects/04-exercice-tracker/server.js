@@ -40,7 +40,41 @@ app.get('/api/users', (req, res) => {
     })
 })
 
+app.get('/api/users/:id/logs', (req, res) => {
+  const id = req.params.id;
+  const dateFrom = new Date(req.query.from);
+  const dateTo = new Date(req.query.to);
+  const limit = parseInt(req.query.limit);
 
+  User.findOne({ _id: new ObjectId(id) }, (err, data) => {
+    if (err) return res.send(ERROR);
+
+    let log = [];
+
+    data.exercises.filter(
+      (exercise) =>
+        new Date(Date.parse(exercise.date)).getTime() > dateFrom &&
+        new Date(Date.parse(exercise.date)).getTime() < dateTo
+    );
+
+    for (const exercise of data.exercises) {
+      log.push({
+        description: exercise.description,
+        duration: exercise.duration,
+        date: new Date(exercise.date).toDateString(),
+      });
+    }
+
+    if (limit) log = log.slice(0, limit);
+
+    res.json({
+      _id: data._id,
+      username: data.username,
+      count: log.length,
+      log: log,
+    });
+  });
+});
 
 app.post('/api/users', (req, res) => {
     const username = req.body.username;
