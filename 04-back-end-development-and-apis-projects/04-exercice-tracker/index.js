@@ -48,6 +48,14 @@ const userSchema = new Schema(
 const User = mongoose.model('User', userSchema);
 const ERROR = { error: 'There was an error while getting the users.' };
 
+app.get('/api/users', (req, res) => {
+  User.find({}, (err, data) => {
+    if (err) return res.send(ERROR);
+    res.json(data);
+  });
+});
+
+
 
 app.post('/api/users', (req, res) => {
   res.status(201).json({
