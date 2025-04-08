@@ -56,12 +56,15 @@ app.get('/api/users', (req, res) => {
 });
 
 
-
 app.post('/api/users', (req, res) => {
-  res.status(201).json({
-    message: 'user saved successfully'
-  })
+  const username = req.body.username;
+  User.create({ username: username }, (err, data) => {
+    if (err) return res.send(ERROR);
+    res.json({ _id: data._id, username: data.username });
+  });
 });
+
+
 app.post('/api/users/:id/exercises', (req, res) => {
   const id = req.params.id;
   let { description, duration, date } = req.body;
